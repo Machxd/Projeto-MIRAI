@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Acessar — Projeto MIRAI</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,700;1,9..144,300;1,9..144,500&family=Manrope:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<script src="config.js"></script>
+
+<style>
+  :root {
+    --forest-deep:  #0E1916;
+    --forest:       #1B2A26;
+    --forest-line:  #3B4F49;
+    --sage:         #7C9975;
+    --sage-bright:  #A3C29A;
+    --cream:        #EBE5D5;
+    --cream-mute:   #8A9186;
+    --error:        #D47474;
+  }
+
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body { height: 100%; }
+
+  body {
+    background: var(--forest-deep);
+    color: var(--cream);
+    font-family: 'Manrope', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── NAV TOP ── */
+  nav {
+    padding: 22px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .logo-mark { width: 32px; height: 32px; }
+
+  .logo-text {
+    font-family: 'Fraunces', serif;
+    font-size: 16px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+  }
+  .logo-text b { color: var(--sage); font-weight: 700; }
+
+  .back {
+    font-size: 13px;
+    color: var(--cream-mute);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  .back:hover { color: var(--sage-bright); }
+
+  /* ── MAIN ── */
+  main {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 24px 80px;
+  }
+
+  .card {
+    width: 100%;
+    max-width: 400px;
+  }
+
+  .card-header {
+    text-align: center;
+    margin-bottom: 40px;
+  }
+
+  h1 {
+    font-family: 'Fraunces', serif;
+    font-size: 38px;
+    font-weight: 400;
+    line-height: 1.1;
+    letter-spacing: -1px;
+    color: var(--cream);
+    margin-bottom: 12px;
+  }
+
+  h1 em { font-style: italic; color: var(--sage); }
+
+  .sub {
+    color: var(--cream-mute);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  /* ── FORM ── */
+  form { display: flex; flex-direction: column; gap: 18px; }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .field label {
+    font-size: 13px;
+    color: var(--cream);
+    font-weight: 500;
+  }
+
+  .input-wrap {
+    position: relative;
+  }
+
+  input[type=email],
+  input[type=password],
+  input[type=text] {
+    width: 100%;
+    background: var(--forest);
+    border: 1px solid var(--forest-line);
+    border-radius: 12px;
+    padding: 14px 16px;
+    font-size: 14px;
+    color: var(--cream);
+    font-family: 'Manrope', sans-serif;
+    outline: none;
+    transition: border-color 0.2s, background 0.2s;
+  }
+
+  input::placeholder {
+    color: var(--cream-mute);
+    opacity: 0.6;
+  }
+
+  input:focus {
+    border-color: var(--sage);
+    background: rgba(124,153,117,0.05);
+  }
+
+  .toggle-pass {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--cream-mute);
+    cursor: pointer;
+    font-size: 12px;
+    font-family: 'Manrope', sans-serif;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: color 0.2s;
+  }
+
+  .toggle-pass:hover { color: var(--sage-bright); }
+
+  .forgot {
+    align-self: flex-end;
+    font-size: 12px;
+    color: var(--sage-bright);
+    text-decoration: none;
+    margin-top: -8px;
+  }
+
+  .forgot:hover { text-decoration: underline; }
+
+  button[type=submit] {
+    margin-top: 8px;
+    padding: 14px 24px;
+    background: var(--sage);
+    color: var(--forest-deep);
+    border: none;
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 14px;
+    font-family: 'Manrope', sans-serif;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  button[type=submit]:hover:not(:disabled) {
+    background: var(--sage-bright);
+    transform: translateY(-1px);
+  }
+
+  button[type=submit]:disabled { opacity: 0.7; cursor: wait; }
+
+  .spinner {
+    width: 14px; height: 14px;
+    border: 2px solid rgba(14,25,22,0.3);
+    border-top-color: var(--forest-deep);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: none;
+  }
+
+  button.loading .spinner { display: block; }
+  button.loading .label { display: none; }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── ERROR ── */
+  .error-msg {
+    background: rgba(212,116,116,0.08);
+    border: 1px solid rgba(212,116,116,0.25);
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: var(--error);
+    display: none;
+  }
+
+  .error-msg.show { display: block; }
+
+  /* ── FOOTER ── */
+  .card-footer {
+    text-align: center;
+    margin-top: 28px;
+    font-size: 13px;
+    color: var(--cream-mute);
+  }
+
+  .card-footer a {
+    color: var(--sage-bright);
+    text-decoration: none;
+    font-weight: 500;
+  }
+
+  .card-footer a:hover { text-decoration: underline; }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 500px) {
+    nav { padding: 18px 24px; }
+    h1 { font-size: 32px; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="logo">
+    <img src="logo.png" class="logo-mark" alt="MIRAI">
+    <div class="logo-text">PROJETO <b>MIRAI</b></div>
+  </a>
+  <a href="index.html" class="back">← Voltar</a>
+</nav>
+
+<main>
+  <div class="card">
+
+    <div class="card-header">
+      <h1>Bem-vindo <em>de volta.</em></h1>
+      <p class="sub">Entre com suas credenciais para acessar a plataforma.</p>
+    </div>
+
+    <form id="login-form" autocomplete="on">
+
+      <div class="error-msg" id="err">Credenciais inválidas. Tente novamente.</div>
+
+      <div class="field">
+        <label for="email">E-mail</label>
+        <div class="input-wrap">
+          <input type="email" id="email" name="email" placeholder="seu@email.com" autocomplete="email" required>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="password">Senha</label>
+        <div class="input-wrap">
+          <input type="password" id="password" name="password" placeholder="••••••••" autocomplete="current-password" required minlength="6">
+          <button type="button" class="toggle-pass" onclick="togglePass()" id="toggle-btn">Mostrar</button>
+        </div>
+      </div>
+
+      <a href="#" class="forgot">Esqueci a senha</a>
+
+      <button type="submit" id="submit-btn">
+        <span class="label">Entrar →</span>
+        <span class="spinner"></span>
+      </button>
+
+    </form>
+
+    <div class="card-footer">
+      Ainda não tem acesso? <a href="register.html">Solicitar cadastro</a>
+    </div>
+
+  </div>
+</main>
+
+<script>
+function togglePass() {
+  const input = document.getElementById('password');
+  const btn = document.getElementById('toggle-btn');
+  if (input.type === 'password') {
+    input.type = 'text';
+    btn.textContent = 'Ocultar';
+  } else {
+    input.type = 'password';
+    btn.textContent = 'Mostrar';
+  }
+}
+
+const form = document.getElementById('login-form');
+const btn = document.getElementById('submit-btn');
+const err = document.getElementById('err');
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  err.classList.remove('show');
+
+  const email    = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+
+  btn.classList.add('loading');
+  btn.disabled = true;
+
+  try {
+    const response = await fetch(window.API_BASE + '/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+
+    const data = await response.json();
+
+    if (response.ok && data.token) {
+      localStorage.setItem('mirai_token', data.token);
+      localStorage.setItem('mirai_user', JSON.stringify(data.user));
+      window.location.href = 'mirai.html';
+    } else {
+      err.textContent = data.error || 'Credenciais inválidas. Tente novamente.';
+      err.classList.add('show');
+      btn.classList.remove('loading');
+      btn.disabled = false;
+    }
+  } catch (erro) {
+    err.textContent = 'Não foi possível conectar ao servidor.';
+    err.classList.add('show');
+    btn.classList.remove('loading');
+    btn.disabled = false;
+  }
+});
+</script>
+
+</body>
+</html>

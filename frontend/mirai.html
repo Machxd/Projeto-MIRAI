@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Projeto MIRAI — Gestão de Impacto Visual</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,700;1,9..144,300;1,9..144,500&family=Manrope:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+
+<style>
+  :root {
+    --forest-deep:  #0E1916;
+    --forest:       #1B2A26;
+    --forest-mid:   #2D3E3A;
+    --forest-line:  #3B4F49;
+    --sage:         #7C9975;
+    --sage-bright:  #A3C29A;
+    --sage-soft:    #556E52;
+    --cream:        #EBE5D5;
+    --cream-mute:   #8A9186;
+    --amber:        #D4A574;
+    --amber-deep:   #A06A3A;
+    --star:         #F4EDD8;
+    --glow:         rgba(124,153,117,0.18);
+  }
+
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; overflow: hidden; }
+
+  body {
+    background: var(--forest-deep);
+    color: var(--cream);
+    font-family: 'Manrope', sans-serif;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+
+  body::before {
+    content: "";
+    position: fixed; inset: 0;
+    pointer-events: none;
+    opacity: 0.025;
+    z-index: 1;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 28px;
+    height: 64px;
+    background: linear-gradient(180deg, var(--forest) 0%, rgba(27,42,38,0.95) 100%);
+    border-bottom: 1px solid var(--forest-line);
+    flex-shrink: 0;
+    z-index: 1000;
+    position: relative;
+  }
+
+  header::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(1px 1px at 20% 30%, var(--star), transparent 50%),
+      radial-gradient(1px 1px at 70% 20%, var(--star), transparent 50%),
+      radial-gradient(1px 1px at 90% 60%, rgba(244,237,216,0.5), transparent 50%),
+      radial-gradient(1px 1px at 15% 80%, rgba(244,237,216,0.4), transparent 50%);
+    opacity: 0.6;
+  }
+
+  .brand { display: flex; align-items: center; gap: 14px; z-index: 2; }
+  .brand-mark { width: 42px; height: 42px; flex-shrink: 0; }
+
+  .brand-text {
+    font-family: 'Fraunces', serif;
+    font-size: 22px;
+    font-weight: 500;
+    letter-spacing: 1px;
+    line-height: 1;
+  }
+  .brand-text b { font-weight: 700; color: var(--sage); }
+
+  .brand-sub {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--cream-mute);
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+
+  .header-right { display: flex; align-items: center; gap: 24px; z-index: 2; }
+
+  .metric {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--cream-mute);
+    letter-spacing: 1.5px;
+  }
+
+  .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--sage);
+    box-shadow: 0 0 8px var(--sage);
+    animation: breathe 2.4s ease-in-out infinite;
+  }
+  .dot.amber { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
+
+  @keyframes breathe {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.45; transform: scale(0.85); }
+  }
+
+  .clock {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--sage-bright);
+    letter-spacing: 1.5px;
+    font-weight: 500;
+  }
+
+  .main { display: flex; flex: 1; overflow: hidden; position: relative; z-index: 2; }
+
+  aside {
+    width: 300px;
+    background: var(--forest);
+    border-right: 1px solid var(--forest-line);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    flex-shrink: 0;
+  }
+
+  aside::-webkit-scrollbar { width: 5px; }
+  aside::-webkit-scrollbar-track { background: transparent; }
+  aside::-webkit-scrollbar-thumb { background: var(--forest-line); border-radius: 3px; }
+
+  .section { padding: 20px 22px; border-bottom: 1px solid var(--forest-line); }
+
+  .section-title {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--sage-bright);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .section-title::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, var(--forest-line), transparent);
+  }
+
+  .layer {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--forest-line);
+    border-radius: 4px;
+    cursor: pointer;
+    margin-bottom: 7px;
+    transition: all 0.2s ease;
+    background: transparent;
+    width: 100%;
+    font-family: 'Manrope', sans-serif;
+    font-size: 12.5px;
+    color: var(--cream);
+    text-align: left;
+  }
+
+  .layer:hover { border-color: var(--sage); background: var(--glow); }
+  .layer.on { border-color: var(--sage); background: var(--glow); }
+
+  .layer-ico { width: 10px; height: 10px; border-radius: 1px; flex-shrink: 0; }
+
+  .switch {
+    margin-left: auto;
+    width: 30px; height: 16px;
+    border-radius: 10px;
+    background: var(--forest-line);
+    position: relative;
+    transition: background 0.25s;
+    flex-shrink: 0;
+  }
+
+  .layer.on .switch { background: var(--sage); }
+
+  .switch::after {
+    content: "";
+    position: absolute;
+    top: 2px; left: 2px;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: var(--cream);
+    transition: transform 0.25s ease;
+  }
+
+  .layer.on .switch::after { transform: translateX(14px); }
+
+  .slider-box { margin-top: 14px; }
+
+  .slider-lab {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--cream-mute);
+    letter-spacing: 1.5px;
+    margin-bottom: 8px;
+  }
+
+  .slider-lab b { color: var(--sage-bright); font-weight: 500; }
+
+  input[type=range] {
+    width: 100%;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 2px;
+    border-radius: 1px;
+    background: var(--forest-line);
+    outline: none;
+  }
+
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--cream);
+    cursor: pointer;
+    border: 2px solid var(--sage);
+    transition: transform 0.15s;
+  }
+  input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.15); }
+  input[type=range]::-moz-range-thumb {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--cream);
+    cursor: pointer;
+    border: 2px solid var(--sage);
+  }
+
+  .years { display: flex; gap: 5px; flex-wrap: wrap; }
+
+  .year {
+    padding: 6px 11px;
+    border: 1px solid var(--forest-line);
+    border-radius: 3px;
+    background: transparent;
+    color: var(--cream-mute);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .year:hover { border-color: var(--sage); color: var(--sage-bright); }
+  .year.on {
+    background: var(--sage);
+    border-color: var(--sage);
+    color: var(--forest-deep);
+  }
+
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+  .stat {
+    background: var(--forest-deep);
+    border: 1px solid var(--forest-line);
+    border-radius: 4px;
+    padding: 12px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .stat::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0;
+    width: 2px; height: 100%;
+    background: var(--sage);
+  }
+  .stat.warn::before { background: var(--amber); }
+
+  .stat-val {
+    font-family: 'Fraunces', serif;
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--sage-bright);
+    line-height: 1;
+    letter-spacing: -0.5px;
+  }
+
+  .stat.warn .stat-val { color: var(--amber); }
+
+  .stat-lab {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--cream-mute);
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    margin-top: 6px;
+  }
+
+  .bortle { display: flex; flex-direction: column; gap: 7px; }
+
+  .bortle-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 11.5px;
+    color: var(--cream);
+  }
+
+  .bortle-bar {
+    width: 28px; height: 11px;
+    border-radius: 2px;
+    flex-shrink: 0;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+
+  .bortle-row b {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--sage-bright);
+    font-weight: 500;
+    margin-right: 4px;
+  }
+
+  .info-box {
+    background: var(--forest-deep);
+    border: 1px solid var(--forest-line);
+    border-radius: 4px;
+    padding: 12px 14px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--cream-mute);
+    line-height: 1.9;
+    min-height: 90px;
+  }
+
+  .info-box .k { color: var(--sage); display: inline-block; min-width: 54px; }
+  .info-box .v { color: var(--cream); }
+  .info-box em {
+    font-style: italic;
+    font-family: 'Fraunces', serif;
+    color: var(--cream-mute);
+    font-size: 12px;
+  }
+
+  .credit {
+    margin-top: auto;
+    padding: 18px 22px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--cream-mute);
+    letter-spacing: 0.8px;
+    line-height: 1.8;
+    border-top: 1px solid var(--forest-line);
+  }
+
+  .credit b { color: var(--sage-bright); font-weight: 500; }
+
+  #map { flex: 1; position: relative; background: var(--forest-deep); }
+
+  .leaflet-container {
+    background: var(--forest-deep) !important;
+    font-family: 'Manrope', sans-serif !important;
+  }
+
+  .leaflet-control-attribution {
+    background: rgba(14,25,22,0.92) !important;
+    color: var(--cream-mute) !important;
+    font-size: 9px !important;
+    padding: 2px 8px !important;
+    border-top: 1px solid var(--forest-line) !important;
+    border-left: 1px solid var(--forest-line) !important;
+  }
+  .leaflet-control-attribution a { color: var(--sage-bright) !important; }
+
+  .leaflet-control-zoom {
+    border: 1px solid var(--forest-line) !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
+  }
+
+  .leaflet-control-zoom a {
+    background: var(--forest) !important;
+    color: var(--cream) !important;
+    border-color: var(--forest-line) !important;
+    font-family: 'Fraunces', serif !important;
+    font-weight: 300 !important;
+  }
+  .leaflet-control-zoom a:hover {
+    background: var(--sage-soft) !important;
+    color: var(--star) !important;
+  }
+
+  #coords {
+    position: absolute;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(27,42,38,0.9);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--forest-line);
+    border-radius: 24px;
+    padding: 8px 18px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--cream-mute);
+    letter-spacing: 1.2px;
+    z-index: 800;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+
+  #coords b {
+    color: var(--sage-bright);
+    font-weight: 500;
+    margin: 0 4px;
+  }
+
+  #coords .sep { color: var(--forest-line); margin: 0 10px; }
+
+  .leaflet-popup-content-wrapper {
+    background: var(--forest) !important;
+    border: 1px solid var(--sage-soft) !important;
+    border-radius: 4px !important;
+    color: var(--cream) !important;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.6) !important;
+  }
+  .leaflet-popup-tip {
+    background: var(--forest) !important;
+    border: 1px solid var(--sage-soft) !important;
+  }
+  .leaflet-popup-content { margin: 14px 16px !important; font-family: 'Manrope', sans-serif !important; }
+  .leaflet-popup-close-button {
+    color: var(--cream-mute) !important;
+    font-size: 18px !important;
+    padding: 6px 8px 0 0 !important;
+  }
+
+  .pop-title {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-size: 15px;
+    color: var(--sage-bright);
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--forest-line);
+  }
+
+  .pop-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 24px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    padding: 2px 0;
+  }
+
+  .pop-row .k { color: var(--cream-mute); letter-spacing: 1px; }
+  .pop-row .v { color: var(--cream); font-weight: 500; }
+
+  .pop-bortle {
+    margin-top: 10px;
+    padding: 8px 10px;
+    border-radius: 3px;
+    text-align: center;
+    font-family: 'Fraunces', serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+
+  #load {
+    position: fixed;
+    inset: 0;
+    background: var(--forest-deep);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    gap: 24px;
+    transition: opacity 0.7s ease;
+  }
+
+  #load.hide { opacity: 0; pointer-events: none; }
+
+  #load::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(1px 1px at 20% 30%, var(--star), transparent),
+      radial-gradient(1px 1px at 80% 20%, var(--star), transparent),
+      radial-gradient(1px 1px at 40% 70%, var(--star), transparent),
+      radial-gradient(1px 1px at 90% 80%, var(--star), transparent),
+      radial-gradient(1px 1px at 10% 90%, var(--star), transparent),
+      radial-gradient(1px 1px at 65% 45%, var(--star), transparent);
+    opacity: 0.5;
+    animation: twinkle 3s ease-in-out infinite;
+  }
+
+  @keyframes twinkle {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 0.7; }
+  }
+
+  .load-brand {
+    font-family: 'Fraunces', serif;
+    font-size: 56px;
+    font-weight: 500;
+    letter-spacing: 8px;
+    color: var(--cream);
+    z-index: 1;
+  }
+  .load-brand b { color: var(--sage); font-weight: 700; }
+
+  .load-sub {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-size: 12px;
+    color: var(--cream-mute);
+    letter-spacing: 3px;
+    z-index: 1;
+    margin-top: -12px;
+  }
+
+  .load-bar {
+    width: 180px; height: 1px;
+    background: var(--forest-line);
+    position: relative;
+    z-index: 1;
+    overflow: hidden;
+  }
+
+  .load-bar::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, var(--sage), transparent);
+    animation: slide 1.6s ease-in-out infinite;
+  }
+
+  @keyframes slide {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+
+  .load-status {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--cream-mute);
+    letter-spacing: 2.5px;
+    z-index: 1;
+  }
+</style>
+</head>
+<body>
+
+<div id="load">
+  <div class="load-brand">MIR<b>AI</b></div>
+  <div class="load-sub">gestão inteligente de impacto visual</div>
+  <div class="load-bar"></div>
+  <div class="load-status">INICIALIZANDO SISTEMA</div>
+</div>
+
+<header>
+  <div class="brand">
+    <img src="logo.png" class="brand-mark" alt="MIRAI">
+    <div>
+      <div class="brand-text">PROJETO <b>MIRAI</b></div>
+      <div class="brand-sub">Poluição Luminosa · Ofuscamento Viário</div>
+    </div>
+  </div>
+
+  <div class="header-right">
+    <div class="metric"><span class="dot"></span>VIIRS NOAA-20 · ONLINE</div>
+    <div class="metric"><span class="dot amber"></span>847 OCORRÊNCIAS ATIVAS</div>
+    <div class="clock" id="clock">--:--:--</div>
+  </div>
+</header>
+
+<div class="main">
+
+  <aside>
+
+    <div class="section">
+      <div class="section-title">Camadas</div>
+
+      <button class="layer on" id="l-viirs">
+        <span class="layer-ico" style="background:linear-gradient(90deg,#1a472a,#52b788,#d4e157,#ff7043,#e53935,#fce4ec)"></span>
+        Poluição Luminosa (Bortle)
+        <span class="switch"></span>
+      </button>
+
+      <button class="layer on" id="l-base">
+        <span class="layer-ico" style="background:#7C9975"></span>
+        Mapa Base
+        <span class="switch"></span>
+      </button>
+
+      <button class="layer" id="l-border">
+        <span class="layer-ico" style="background:#A3C29A"></span>
+        Divisão Estadual
+        <span class="switch"></span>
+      </button>
+
+      <div class="slider-box">
+        <div class="slider-lab">
+          <span>INTENSIDADE</span>
+          <b id="op-val">20%</b>
+        </div>
+        <input type="range" min="0" max="100" value="20" id="op">
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Indicadores Nacionais</div>
+      <div class="stats">
+        <div class="stat warn">
+          <div class="stat-val">847</div>
+          <div class="stat-lab">Ocorrências</div>
+        </div>
+        <div class="stat">
+          <div class="stat-val">72<span style="font-size:16px">%</span></div>
+          <div class="stat-lab">Áreas Afetadas</div>
+        </div>
+        <div class="stat">
+          <div class="stat-val">5.568</div>
+          <div class="stat-lab">Municípios</div>
+        </div>
+        <div class="stat warn">
+          <div class="stat-val">+8<span style="font-size:16px">%</span></div>
+          <div class="stat-lab">Variação/ano</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Escala Bortle</div>
+      <div class="bortle">
+        <div class="bortle-row"><span class="bortle-bar" style="background:#fce4ec;border:1px solid #e57373"></span><b>9</b>Centro urbano</div>
+        <div class="bortle-row"><span class="bortle-bar" style="background:#e53935"></span><b>8</b>Quase urbano</div>
+        <div class="bortle-row"><span class="bortle-bar" style="background:#ff7043"></span><b>7</b>Suburbano</div>
+        <div class="bortle-row"><span class="bortle-bar" style="background:#ffb74d"></span><b>6</b>Suburbano claro</div>
+        <div class="bortle-row"><span class="bortle-bar" style="background:#d4e157"></span><b>5</b>Transição</div>
+        <div class="bortle-row"><span class="bortle-bar" style="background:#52b788"></span><b>3–4</b>Rural</div>
+        <div class="bortle-row"><span class="bortle-bar" style="background:#1a472a"></span><b>1–2</b>Céu escuro ideal</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Ponto Selecionado</div>
+      <div class="info-box" id="info">
+        <em>Clique no mapa para analisar um ponto.</em>
+      </div>
+    </div>
+
+    <div class="credit">
+      <b>Fontes de dados</b><br>
+      NASA VIIRS Black Marble<br>
+      Satélites NOAA-20 / Suomi-NPP<br>
+      Resolução espacial: 500 m/pixel<br>
+      <br>
+      <b>Mapa base</b><br>
+      CARTO Dark Matter<br>
+      OpenStreetMap Contributors
+    </div>
+
+  </aside>
+
+  <div id="map">
+    <div id="coords">
+      <span>LAT</span> <b id="lat">—</b>
+      <span class="sep">·</span>
+      <span>LNG</span> <b id="lng">—</b>
+      <span class="sep">·</span>
+      <span>ZOOM</span> <b id="z">—</b>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function tick() {
+  const n = new Date();
+  document.getElementById('clock').textContent =
+    n.toLocaleTimeString('pt-BR', { hour12: false });
+}
+setInterval(tick, 1000); tick();
+
+const map = L.map('map', {
+  center: [-14.5, -52],
+  zoom: 4,
+  minZoom: 3,
+  maxZoom: 12,
+  zoomControl: true,
+  attributionControl: true,
+  worldCopyJump: false,
+});
+
+const base = L.tileLayer(
+  'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+  {
+    attribution: '© OpenStreetMap · © CARTO',
+    subdomains: 'abcd',
+    maxZoom: 19,
+  }
+).addTo(map);
+
+/* NASA GIBS - VIIRS Black Marble (composite anual, cloud-free, cores reais) */
+const VIIRS_URLS = {
+  2020: 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_Black_Marble/default/2016-01-01/GoogleMapsCompatible_Level8/{z}/{y}/{x}.png',
+  2021: 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_Black_Marble/default/2016-01-01/GoogleMapsCompatible_Level8/{z}/{y}/{x}.png',
+  2022: 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_Black_Marble/default/2016-01-01/GoogleMapsCompatible_Level8/{z}/{y}/{x}.png',
+  2023: 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_Black_Marble/default/2016-01-01/GoogleMapsCompatible_Level8/{z}/{y}/{x}.png',
+  2024: 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_Black_Marble/default/2016-01-01/GoogleMapsCompatible_Level8/{z}/{y}/{x}.png',
+};
+
+/* Opções padronizadas para a camada VIIRS.
+   maxNativeZoom=8: até onde a NASA tem tiles.
+   maxZoom=19: Leaflet reutiliza os tiles do zoom 8 e faz upscale. */
+const VIIRS_OPTS = {
+  attribution: 'NASA EOSDIS GIBS · VIIRS Black Marble',
+  minZoom: 1,
+  maxZoom: 19,
+  maxNativeZoom: 8,
+  opacity: 0.2,
+  tileSize: 256,
+};
+
+/* ─── PALETA BORTLE: mapeia luminosidade 0-255 → cor RGBA ──────
+   Escala aplicada pixel a pixel nos tiles do satélite VIIRS.
+   Áreas escuras → verde escuro | Áreas iluminadas → vermelho/branco
+────────────────────────────────────────────────────────────── */
+const BORTLE_STOPS = [
+  [0,   [0,   0,   0,   0  ]],   // preto total → transparente
+  [6,   [13,  51,  32,  180]],   // escuríssimo → verde muito escuro
+  [18,  [26,  71,  42,  200]],   // Bortle 1-2  → verde escuro
+  [40,  [45,  106, 79,  215]],   // Bortle 3-4  → verde médio
+  [70,  [82,  183, 136, 220]],   // Bortle 4    → verde claro
+  [100, [183, 228, 199, 225]],   // Bortle 5    → verde pálido
+  [125, [212, 225, 87,  230]],   // Bortle 5-6  → amarelo-verde
+  [150, [255, 202, 40,  235]],   // Bortle 6    → âmbar
+  [175, [255, 112, 67,  240]],   // Bortle 7    → laranja
+  [205, [229, 57,  53,  245]],   // Bortle 8    → vermelho
+  [230, [183, 28,  28,  250]],   // Bortle 8-9  → vermelho escuro
+  [255, [252, 228, 236, 255]],   // Bortle 9    → branco rosado
+];
+
+function bortleColor(lum) {
+  // Interpolação linear entre os stops
+  for (let i = 0; i < BORTLE_STOPS.length - 1; i++) {
+    const [l0, c0] = BORTLE_STOPS[i];
+    const [l1, c1] = BORTLE_STOPS[i + 1];
+    if (lum <= l1) {
+      const t = (lum - l0) / (l1 - l0);
+      return c0.map((v, idx) => Math.round(v + t * (c1[idx] - v)));
+    }
+  }
+  return BORTLE_STOPS[BORTLE_STOPS.length - 1][1];
+}
+
+/* Cache de luminância: guarda o valor real do satélite por tile.
+   Chave: "zoom/x/y" → Uint8Array de 256×256 luminâncias.
+   Usado para saber a classe Bortle exata de qualquer ponto clicado. */
+const lumCache = new Map();
+
+/* Canvas TileLayer — carrega tile VIIRS, aplica paleta Bortle pixel a pixel
+   e armazena a luminância original para leitura posterior no click */
+const BortleLayer = L.TileLayer.extend({
+  createTile(coords, done) {
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 256;
+    const ctx = canvas.getContext('2d');
+    const key = `${coords.z}/${coords.x}/${coords.y}`;
+
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+
+    img.onload = () => {
+      ctx.drawImage(img, 0, 0, 256, 256);
+      try {
+        const imageData = ctx.getImageData(0, 0, 256, 256);
+        const d = imageData.data;
+        const lums = new Uint8Array(256 * 256);
+
+        for (let i = 0; i < d.length; i += 4) {
+          const lum = Math.round(0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2]);
+          lums[i >> 2] = lum; // guarda luminância original
+          const [r, g, b, a] = bortleColor(lum);
+          d[i] = r; d[i+1] = g; d[i+2] = b; d[i+3] = a;
+        }
+
+        ctx.putImageData(imageData, 0, 0);
+        lumCache.set(key, lums);
+      } catch(e) {
+        ctx.drawImage(img, 0, 0, 256, 256);
+      }
+      done(null, canvas);
+    };
+
+    img.onerror = () => done(null, canvas);
+    img.src = this.getTileUrl(coords);
+    return canvas;
+  }
+});
+
+/* Lê a luminância real do satélite para um LatLng.
+   Usa o zoom nativo máximo (8) para encontrar o tile correto. */
+function getLumAtLatLng(latlng) {
+  const z = Math.min(map.getZoom(), 8);
+  const pt = map.project(latlng, z);
+  const tx = Math.floor(pt.x / 256);
+  const ty = Math.floor(pt.y / 256);
+  const px = Math.floor(pt.x - tx * 256);
+  const py = Math.floor(pt.y - ty * 256);
+  const lums = lumCache.get(`${z}/${tx}/${ty}`);
+  return lums ? lums[py * 256 + px] : null;
+}
+
+/* Mapeia luminância 0-255 para a classe Bortle com descrição e cor */
+function lumTobortle(lum) {
+  if (lum === null) return null;
+  if (lum <  6)  return { b: '—',   d: 'Sem dados',          c: '#3B4F49', t: '#EBE5D5' };
+  if (lum < 18)  return { b: '1–2', d: 'Céu Escuro Ideal',   c: '#1a472a', t: '#EBE5D5' };
+  if (lum < 45)  return { b: '3–4', d: 'Rural',              c: '#2d6a4f', t: '#EBE5D5' };
+  if (lum < 80)  return { b: '4',   d: 'Rural/Suburbano',    c: '#52b788', t: '#0E1916' };
+  if (lum < 115) return { b: '5',   d: 'Transição',          c: '#d4e157', t: '#0E1916' };
+  if (lum < 145) return { b: '6',   d: 'Suburbano Claro',    c: '#ffca28', t: '#0E1916' };
+  if (lum < 175) return { b: '7',   d: 'Suburbano',          c: '#ff7043', t: '#EBE5D5' };
+  if (lum < 210) return { b: '8',   d: 'Quase Urbano',       c: '#e53935', t: '#EBE5D5' };
+  return           { b: '9',   d: 'Centro Urbano',       c: '#fce4ec', t: '#0E1916' };
+}
+
+// Instancia a camada colorizada
+let viirs = new BortleLayer(VIIRS_URLS[2024], VIIRS_OPTS).addTo(map);
+
+let border = null;
+
+const state = { viirs: true, base: true, border: false };
+
+function bind(id, key, on, off) {
+  document.getElementById(id).addEventListener('click', function() {
+    state[key] = !state[key];
+    this.classList.toggle('on', state[key]);
+    (state[key] ? on : off)();
+  });
+}
+
+bind('l-viirs', 'viirs',
+  () => map.addLayer(viirs),
+  () => map.removeLayer(viirs));
+
+bind('l-base', 'base',
+  () => base.setOpacity(1),
+  () => base.setOpacity(0));
+
+bind('l-border', 'border',
+  () => loadBorder(),
+  () => { if (border) map.removeLayer(border); });
+
+function loadBorder() {
+  if (border) { map.addLayer(border); return; }
+  fetch('https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/brazil-states.geojson')
+    .then(r => r.json())
+    .then(data => {
+      border = L.geoJSON(data, {
+        style: {
+          color: '#A3C29A',
+          weight: 1.2,
+          fill: false,
+          opacity: 0.6,
+          dashArray: '2 3',
+        }
+      }).addTo(map);
+    })
+    .catch(() => console.warn('Limites indisponíveis.'));
+}
+
+document.getElementById('op').addEventListener('input', function() {
+  const v = this.value;
+  viirs.setOpacity(v / 100);
+  document.getElementById('op-val').textContent = v + '%';
+});
+
+/* ─── CLICK: lê o pixel real do tile e exibe a classe Bortle correta ── */
+map.on('click', e => {
+  const { lat, lng } = e.latlng;
+  const lum = getLumAtLatLng(e.latlng);
+  const r   = lumTobortle(lum);
+
+  // Cidade mais próxima (só para referência geográfica)
+  const CIDADES_REF = [
+    { lat:-23.55,lng:-46.63,n:'São Paulo' },
+    { lat:-22.91,lng:-43.17,n:'Rio de Janeiro' },
+    { lat:-19.92,lng:-43.94,n:'Belo Horizonte' },
+    { lat:-15.80,lng:-47.86,n:'Brasília' },
+    { lat:-3.72, lng:-38.54,n:'Fortaleza' },
+    { lat:-12.97,lng:-38.50,n:'Salvador' },
+    { lat:-30.03,lng:-51.22,n:'Porto Alegre' },
+    { lat:-1.46, lng:-48.48,n:'Belém' },
+    { lat:-8.05, lng:-34.88,n:'Recife' },
+    { lat:-3.10, lng:-60.02,n:'Manaus' },
+    { lat:-25.43,lng:-49.27,n:'Curitiba' },
+    { lat:-16.68,lng:-49.25,n:'Goiânia' },
+    { lat:-5.79, lng:-35.21,n:'Natal' },
+    { lat:-2.54, lng:-44.31,n:'São Luís' },
+    { lat:-20.32,lng:-40.34,n:'Vitória' },
+  ];
+  let minD = Infinity, near = CIDADES_REF[0];
+  for (const c of CIDADES_REF) {
+    const d = Math.hypot(lat - c.lat, lng - c.lng);
+    if (d < minD) { minD = d; near = c; }
+  }
+  const distKm = Math.round(minD * 111);
+
+  const lumLabel = lum !== null ? `${lum} / 255` : 'aguardando tile…';
+  const bortleLabel = r ? `Bortle ${r.b} — ${r.d}` : 'Sem dados';
+  const bgColor  = r ? r.c : '#3B4F49';
+  const txtColor = r ? r.t : '#EBE5D5';
+
+  const html = `
+    <div class="pop-title">Análise de Ponto</div>
+    <div class="pop-row"><span class="k">LATITUDE</span><span class="v">${lat.toFixed(4)}°</span></div>
+    <div class="pop-row"><span class="k">LONGITUDE</span><span class="v">${lng.toFixed(4)}°</span></div>
+    <div class="pop-row"><span class="k">LUMINÂNCIA</span><span class="v">${lumLabel}</span></div>
+    <div class="pop-row"><span class="k">REFERÊNCIA</span><span class="v">${near.n} · ${distKm} km</span></div>
+    <div class="pop-bortle" style="background:${bgColor};color:${txtColor}">
+      ${bortleLabel}
+    </div>
+  `;
+
+  L.popup({ maxWidth: 260, closeButton: true })
+    .setLatLng(e.latlng)
+    .setContent(html)
+    .openOn(map);
+
+  document.getElementById('info').innerHTML = `
+    <span class="k">LAT</span> <span class="v">${lat.toFixed(4)}°</span><br>
+    <span class="k">LNG</span> <span class="v">${lng.toFixed(4)}°</span><br>
+    <span class="k">BORTLE</span> <span class="v">Classe ${r ? r.b : '—'}</span><br>
+    <span class="k">CLASSE</span> <span class="v">${r ? r.d : 'Sem dados'}</span><br>
+    <span class="k">REF.</span> <span class="v">${near.n} (${distKm} km)</span>
+  `;
+});
+
+map.on('mousemove', e => {
+  document.getElementById('lat').textContent = e.latlng.lat.toFixed(3) + '°';
+  document.getElementById('lng').textContent = e.latlng.lng.toFixed(3) + '°';
+});
+map.on('zoom', () => {
+  document.getElementById('z').textContent = map.getZoom();
+});
+document.getElementById('z').textContent = map.getZoom();
+
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    const l = document.getElementById('load');
+    l.classList.add('hide');
+    setTimeout(() => l.remove(), 800);
+  }, 1400);
+});
+</script>
+</body>
+</html>
