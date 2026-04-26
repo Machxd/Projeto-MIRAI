@@ -41,10 +41,10 @@ app.config['TOKEN_EXPIRATION_DAYS'] = 7
 
 # Permite requisições do GitHub Pages e do localhost em dev
 CORS(app, origins=[
-    'http://localhost:*',
-    'http://127.0.0.1:*',
-    'https://*.github.io',
-])
+    r'http://localhost(:\d+)?',
+    r'http://127\.0\.0\.1(:\d+)?',
+    r'https://.*\.github\.io',
+], supports_credentials=False)
 
 
 # ────────────────────────────────────────────────────────────
